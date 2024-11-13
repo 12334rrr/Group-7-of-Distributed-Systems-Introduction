@@ -11,13 +11,21 @@ import TimeServiceClient_Library.NTP_Client;    // The import for the libray (Ti
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.*;
 import javax.swing.*;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Timer;
 import java.util.TimerTask;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-    
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+
 public class TimeServiceClient_GUI_uses_library extends javax.swing.JFrame implements ActionListener
 {
     NTP_Client m_NTP_Client; // Can be written longhand as TimeServiceClient_Library.NTP_Client which emphasises the usage of the library 
@@ -88,6 +96,7 @@ public class TimeServiceClient_GUI_uses_library extends javax.swing.JFrame imple
         jList_NTPServerLocations.setEnabled(false);
         JScrollPane_NTPServerLocations.setEnabled(false);
         jButton_StartNTPClient.setEnabled(true);
+        jButton_AdjustLocalTime.setEnabled(true);
         jButton_Done.setEnabled(true); 
         Initialise_ServerURL_listBox(); // Selects first item in list boxes, by default
     }
@@ -267,8 +276,40 @@ public class TimeServiceClient_GUI_uses_library extends javax.swing.JFrame imple
                 StopTimer();
             }
         }
+        if(jButton_AdjustLocalTime == e.getSource())
+        {
+            String time = jTextField_UTC_Time.getText();
+
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+            LocalTime utcTime = LocalTime.parse(time, formatter);
+
+            // 将 UTC 时间转换为北京时间（东八区），即加 8 小时
+            LocalTime beijingTime = utcTime.plusHours(8);
+
+            System.out.println(beijingTime);
+            System.out.println("Adjust local time");
+            try {
+                // 以管理员权限运行此代码
+                String timeCommand = "cmd /c time " + beijingTime ;   // 设置时间
+                // 执行 time 命令
+                Process timeProcess = Runtime.getRuntime().exec(timeCommand);
+                printProcessOutput(timeProcess);
+
+                System.out.println("系统时间已调整。");
+            } catch (IOException ee) {
+                ee.printStackTrace();
+            }
+        }
     }
-       
+    // 输出命令行结果，便于调试
+    private static void printProcessOutput(Process process) throws IOException {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        String line;
+        while ((line = reader.readLine()) != null) {
+            System.out.println(line);
+        }
+        reader.close();
+    }
     private JPanel jPanel_NTPServerAddressDetails;
     private JLabel jLabel_URL;
     private JTextField jTextField_URL;
@@ -300,6 +341,8 @@ public class TimeServiceClient_GUI_uses_library extends javax.swing.JFrame imple
     private JScrollPane JScrollPane_NTPServerLocations;
     private JPanel jPanel_Controls;
     private JButton jButton_StartNTPClient;
+    private JButton jButton_AdjustLocalTime;
+
     private JButton jButton_Done;
 
     private void initComponents()
@@ -368,13 +411,13 @@ public class TimeServiceClient_GUI_uses_library extends javax.swing.JFrame imple
         jLabel_Offset = new JLabel();
         jLabel_Offset.setText("Offset (ms)");
         jTextField_Offset = new JTextField();
-        jTextField_Offset.setMaximumSize(new Dimension(60, 4));
+        jTextField_Offset.setMaximumSize(new Dimension(120, 4));
         jTextField_Offset.setHorizontalAlignment(JTextField.CENTER);
 
         jLabel_Delay = new JLabel();
         jLabel_Delay.setText("Delay (ms)");
         jTextField_Delay = new JTextField();
-        jTextField_Delay.setMaximumSize(new Dimension(60, 4));
+        jTextField_Delay.setMaximumSize(new Dimension(120, 4));
         jTextField_Delay.setHorizontalAlignment(JTextField.CENTER);
 
         jLabel_NumRequestsSent = new JLabel();
@@ -493,6 +536,12 @@ public class TimeServiceClient_GUI_uses_library extends javax.swing.JFrame imple
         jButton_StartNTPClient.setText("START NTP requests");
         jButton_StartNTPClient.setMaximumSize(new Dimension(100, 4));
         jButton_StartNTPClient.addActionListener(this);
+
+        jButton_AdjustLocalTime = new JButton();
+        jButton_AdjustLocalTime.setText("Adjust Local Time");
+        jButton_AdjustLocalTime.setMaximumSize(new Dimension(100, 4));
+        jButton_AdjustLocalTime.addActionListener(this);
+
         jButton_Done = new JButton();
         jButton_Done.setText("Done");
         jButton_Done.setMaximumSize(new Dimension(100, 4));
@@ -509,12 +558,15 @@ public class TimeServiceClient_GUI_uses_library extends javax.swing.JFrame imple
                     .addContainerGap(200, 200)
                     .add(jButton_StartNTPClient)
                     .addContainerGap(200, 200)
+                    .add(jButton_AdjustLocalTime)
+                    .addContainerGap(200, 200)
                     .add(jButton_Done)
                     .addContainerGap(200, 200)));
         jPanel4Layout.setVerticalGroup(
             jPanel4Layout.createParallelGroup(org.jdesktop.layout.GroupLayout.CENTER)
                 .add(jPanel4Layout.createParallelGroup()
                     .add(jButton_StartNTPClient)
+                    .add(jButton_AdjustLocalTime)
                     .add(jButton_Done)));
 
         org.jdesktop.layout.GroupLayout layout = new org.jdesktop.layout.GroupLayout(getContentPane());
