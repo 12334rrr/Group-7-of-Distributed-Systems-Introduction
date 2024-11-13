@@ -188,7 +188,6 @@ public class TimeServiceClient_GUI_uses_library extends javax.swing.JFrame imple
 
     void SetUp_TimeService_AddressStruct(String sURL)
     {
-        System.out.println("SetUp_TimeService_AddressStruct");
         InetAddress TimeService_IPAddress = m_NTP_Client.SetUp_TimeService_AddressStruct(sURL);
         if(null != TimeService_IPAddress)
         {
@@ -278,13 +277,23 @@ public class TimeServiceClient_GUI_uses_library extends javax.swing.JFrame imple
         }
         if(jButton_AdjustLocalTime == e.getSource())
         {
-            String time = jTextField_UTC_Time.getText();
-
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+            NTP_Client.NTP_Timestamp_Data ntpTimestampData = null;
+            try {
+                ntpTimestampData = m_NTP_Client.Get_Averaged_NTP_Timestamp();
+            } catch (InterruptedException ex) {
+                throw new RuntimeException(ex);
+            }
+            String time = ntpTimestampData.lHour + ":" + ntpTimestampData.lMinute + ":" + ntpTimestampData.lSecond;
+            String offset = Long.toString(ntpTimestampData.offset);
+            if(time.isEmpty()) {
+                System.out.println("Please get UTC time first.");
+                return;
+            }
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("H:mm:ss");
             LocalTime utcTime = LocalTime.parse(time, formatter);
 
             // 将 UTC 时间转换为北京时间（东八区），即加 8 小时
-            LocalTime beijingTime = utcTime.plusHours(8);
+            LocalTime beijingTime = utcTime.plusHours(8).plusSeconds((Long.parseLong(offset) / 1000));
 
             System.out.println(beijingTime);
             System.out.println("Adjust local time");
