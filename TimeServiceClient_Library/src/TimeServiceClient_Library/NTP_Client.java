@@ -2,6 +2,12 @@ package TimeServiceClient_Library;
 
 import java.io.IOException;
 import java.net.*;
+import java.util.ArrayList;
+import java.util.Collections;
+
+import java.util.ArrayList;
+import java.util.Collections;
+
 import static java.lang.Thread.sleep;
 
 public class NTP_Client {
@@ -71,15 +77,18 @@ public class NTP_Client {
 
     public NTP_Timestamp_Data Get_Averaged_NTP_Timestamp() throws InterruptedException {
         NTP_Timestamp_Data averagedTimestamp = new NTP_Timestamp_Data();
-        long totalOffset = 0, totalDelay = 0;
+        ArrayList<Long> offsets = new ArrayList<>();
+        ArrayList<Long> delays = new ArrayList<>();
 
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 10; i++) {
             NTP_Timestamp_Data NTP_Timestamp = Get_NTP_Timestamp();
             averagedTimestamp.eResultCode = NTP_Timestamp.eResultCode;
-            if(NTP_Timestamp.lUnixTime == 0 || NTP_Timestamp.t1 == 0){
-                i --;
+
+            if (NTP_Timestamp.lUnixTime == 0 || NTP_Timestamp.t1 == 0) {
+                i--;  // 如果数据无效，则重试
                 continue;
             }
+
             averagedTimestamp.lUnixTime = NTP_Timestamp.lUnixTime;
             averagedTimestamp.lHour = NTP_Timestamp.lHour;
             averagedTimestamp.lMinute = NTP_Timestamp.lMinute;
@@ -97,31 +106,73 @@ public class NTP_Client {
             System.out.println("Delay: " + NTP_Timestamp.delay);
             System.out.println();
 
-            totalOffset += NTP_Timestamp.offset;
-            totalDelay += NTP_Timestamp.delay;
-            if(i < 2){
-                sleep(5000); // 等待10秒后再发送下一个请求
+            offsets.add(NTP_Timestamp.offset);
+            delays.add(NTP_Timestamp.delay);
+
+            if (i < 9) {
+                Thread.sleep(2000); // 等待5秒后再发送下一个请求
             }
         }
 
-        averagedTimestamp.offset = totalOffset / 3;
-        averagedTimestamp.delay = totalDelay / 3;
-        //根据三次请求的数据的delay和offset调整本地时钟
+        // 去除最大值和最小值
+        Collections.sort(offsets);
+        Collections.sort(delays);
+        offsets.remove(0);
+        offsets.remove(offsets.size() - 1);
+        delays.remove(0);
+        delays.remove(delays.size() - 1);
+
+        // **新增代码：计算中位数并剔除偏离中位数较大的值**
+        ArrayList<Long> filteredOffsets = new ArrayList<>(offsets);
+        ArrayList<Long> filteredDelays = new ArrayList<>(delays);
+        for(int i = 0; i < offsets.size(); i++) {
+            System.out.println("Offset " + (i + 1) + ": " + offsets.get(i));
+        }
+        long medianOffset = filteredOffsets.get(filteredOffsets.size() / 2);
+        long medianDelay = filteredDelays.get(filteredDelays.size() / 2);
+
+        // 移除偏离中位数超过30%的数据
+        filteredOffsets.removeIf(offset -> Math.abs(offset - medianOffset) > Math.abs(medianOffset) * 1);
+        filteredDelays.removeIf(delay -> Math.abs(delay - medianDelay) > medianDelay * 1);
+
+        // **计算剩余值的平均值**
+        long totalOffset = 0, totalDelay = 0;
+        for (long offset : filteredOffsets) {
+            totalOffset += offset;
+        }
+        for (long delay : filteredDelays) {
+            totalDelay += delay;
+        }
+        for(int i = 0; i < filteredOffsets.size(); i++) {
+            System.out.println("Filtered Offset " + (i + 1) + ": " + filteredOffsets.get(i));
+        }
+        for(int i = 0; i < filteredDelays.size(); i++) {
+            System.out.println("Filtered Delay " + (i + 1) + ": " + filteredDelays.get(i));
+        }
+        averagedTimestamp.offset = filteredOffsets.isEmpty() ? 0 : totalOffset / filteredOffsets.size();
+        averagedTimestamp.delay = filteredDelays.isEmpty() ? 0 : totalDelay / filteredDelays.size();
+
+        // 根据平均的 offset 调整本地时钟
         averagedTimestamp.lUnixTime += averagedTimestamp.offset / 1000;
-        averagedTimestamp.lHour = (long) (averagedTimestamp.lUnixTime % 86400L) / 3600;
-        averagedTimestamp.lMinute = (long) (averagedTimestamp.lUnixTime % 3600) / 60;
-        averagedTimestamp.lSecond = (long) averagedTimestamp.lUnixTime % 60;
+        averagedTimestamp.lHour = (averagedTimestamp.lUnixTime % 86400L) / 3600;
+        averagedTimestamp.lMinute = (averagedTimestamp.lUnixTime % 3600) / 60;
+        averagedTimestamp.lSecond = averagedTimestamp.lUnixTime % 60;
 
         return averagedTimestamp;
     }
-    public Boolean Get_ClientStarted_Flag()
-    {
+
+
+
+
+
+    public Boolean Get_ClientStarted_Flag() {
         return m_bNTP_Client_Started;
     }
-    public void Set_ClientStarted_Flag(Boolean bClient_Started)
-    {
+
+    public void Set_ClientStarted_Flag(Boolean bClient_Started) {
         m_bNTP_Client_Started = bClient_Started;
     }
+
     public NTP_Timestamp_Data Get_NTP_Timestamp() {
         NTP_Timestamp_Data NTP_Timestamp = new NTP_Timestamp_Data();
         if (m_bTimeServiceAddressSet) {
@@ -187,8 +238,8 @@ public class NTP_Client {
             l4 = (long) bRecvBuf[43] & 0xFF;
 
             long secsSince1900 = (l1 << 24) + (l2 << 16) + (l3 << 8) + l4;
-            NTP_Timestamp.lUnixTime = secsSince1900 - SeventyYears;	// Subtract seventy years
-            NTP_Timestamp.lHour = (long) (NTP_Timestamp.lUnixTime  % 86400L) / 3600;
+            NTP_Timestamp.lUnixTime = secsSince1900 - SeventyYears;    // Subtract seventy years
+            NTP_Timestamp.lHour = (long) (NTP_Timestamp.lUnixTime % 86400L) / 3600;
             NTP_Timestamp.lMinute = (long) (NTP_Timestamp.lUnixTime % 3600) / 60;
             NTP_Timestamp.lSecond = (long) NTP_Timestamp.lUnixTime % 60;
 
@@ -199,14 +250,11 @@ public class NTP_Client {
         }
         return NTP_Timestamp;
     }
-    public void CloseSocket()
-    {
-        try
-        {
+
+    public void CloseSocket() {
+        try {
             m_TimeService_Socket.close();
-        }
-        catch (Exception Ex)
-        {   // Generic approach to dealing with situations such as socket not created
+        } catch (Exception Ex) {   // Generic approach to dealing with situations such as socket not created
         }
     }
 
