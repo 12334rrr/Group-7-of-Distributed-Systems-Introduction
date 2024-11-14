@@ -284,16 +284,18 @@ public class TimeServiceClient_GUI_uses_library extends javax.swing.JFrame imple
                 throw new RuntimeException(ex);
             }
             String time = ntpTimestampData.lHour + ":" + ntpTimestampData.lMinute + ":" + ntpTimestampData.lSecond;
+//            String time = "10:00:00";
             String offset = Long.toString(ntpTimestampData.offset);
             if(time.isEmpty()) {
                 System.out.println("Please get UTC time first.");
                 return;
             }
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("H:mm:ss");
+            System.out.println("time: " + time);
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("H:m:s");
             LocalTime utcTime = LocalTime.parse(time, formatter);
-
+            System.out.println("UTC time: " + utcTime);
             // 将 UTC 时间转换为北京时间（东八区），即加 8 小时
-            LocalTime beijingTime = utcTime.plusHours(8).plusSeconds((Long.parseLong(offset) / 1000));
+            LocalTime beijingTime = utcTime.plusHours(8);
 
             System.out.println(beijingTime);
             System.out.println("Adjust local time");

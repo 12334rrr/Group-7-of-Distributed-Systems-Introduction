@@ -153,17 +153,10 @@ public class NTP_Client {
         averagedTimestamp.delay = filteredDelays.isEmpty() ? 0 : totalDelay / filteredDelays.size();
 
         // 根据平均的 offset 调整本地时钟
-        averagedTimestamp.lUnixTime += averagedTimestamp.offset / 1000;
-        averagedTimestamp.lHour = (averagedTimestamp.lUnixTime % 86400L) / 3600;
-        averagedTimestamp.lMinute = (averagedTimestamp.lUnixTime % 3600) / 60;
-        averagedTimestamp.lSecond = averagedTimestamp.lUnixTime % 60;
-
+//        averagedTimestamp.lUnixTime += averagedTimestamp.offset / 1000;
+//        averagedTimestamp.lSecond = averagedTimestamp.lSecond + (averagedTimestamp.offset / 1000) % 60;
         return averagedTimestamp;
     }
-
-
-
-
 
     public Boolean Get_ClientStarted_Flag() {
         return m_bNTP_Client_Started;
@@ -182,12 +175,6 @@ public class NTP_Client {
                 if (NTP_Timestamp.t3 != 0 && NTP_Timestamp.t2 != 0) {
                     System.out.println("Receive Success");
                     NTP_Timestamp.eResultCode = NTP_Client_ResultCode.NTP_Success;
-
-                    // 计算 Unix 时间和时分秒
-                    NTP_Timestamp.lUnixTime = System.currentTimeMillis() / 1000;  // 获取当前 Unix 时间
-                    NTP_Timestamp.lHour = (NTP_Timestamp.lUnixTime / 3600) % 24;
-                    NTP_Timestamp.lMinute = (NTP_Timestamp.lUnixTime % 3600) / 60;
-                    NTP_Timestamp.lSecond = NTP_Timestamp.lUnixTime % 60;
 
                     return NTP_Timestamp;
                 }
