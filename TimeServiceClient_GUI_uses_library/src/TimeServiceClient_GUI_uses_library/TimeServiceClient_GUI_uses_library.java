@@ -295,13 +295,23 @@ public class TimeServiceClient_GUI_uses_library extends javax.swing.JFrame imple
             LocalTime utcTime = LocalTime.parse(time, formatter);
             System.out.println("UTC time: " + utcTime);
             // 将 UTC 时间转换为北京时间（东八区），即加 8 小时
-            LocalTime beijingTime = utcTime.plusHours(8);
+            // 获取本地当前时间
+            LocalTime localTime = LocalTime.now();
+            System.out.println("Local time: " + localTime);
+            // 将本地时间加上 offset
+            LocalTime adjustedTime = localTime.plusSeconds(ntpTimestampData.offset/1000 + 2);
+            System.out.println("Adjusted local time with offset: " + adjustedTime);
+            // 将时间格式化为 HH:mm:ss
+            DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+            String formattedTime = adjustedTime.format(timeFormatter);
+            System.out.println("Formatted adjusted time: " + formattedTime);
 
-            System.out.println(beijingTime);
+//            LocalTime beijingTime = utcTime.plusHours(8);
+//            System.out.println(beijingTime);
             System.out.println("Adjust local time");
             try {
                 // 以管理员权限运行此代码
-                String timeCommand = "cmd /c time " + beijingTime ;   // 设置时间
+                String timeCommand = "cmd /c time " + formattedTime ;   // 设置时间
                 // 执行 time 命令
                 Process timeProcess = Runtime.getRuntime().exec(timeCommand);
                 printProcessOutput(timeProcess);

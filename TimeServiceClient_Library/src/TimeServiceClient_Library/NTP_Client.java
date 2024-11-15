@@ -131,7 +131,7 @@ public class NTP_Client {
         long medianOffset = filteredOffsets.get(filteredOffsets.size() / 2);
         long medianDelay = filteredDelays.get(filteredDelays.size() / 2);
 
-        // 移除偏离中位数超过30%的数据
+        // 移除偏离中位数超过1倍的数据
         filteredOffsets.removeIf(offset -> Math.abs(offset - medianOffset) > Math.abs(medianOffset) * 1);
         filteredDelays.removeIf(delay -> Math.abs(delay - medianDelay) > medianDelay * 1);
 
@@ -223,14 +223,23 @@ public class NTP_Client {
             l2 = (long) bRecvBuf[41] & 0xFF;
             l3 = (long) bRecvBuf[42] & 0xFF;
             l4 = (long) bRecvBuf[43] & 0xFF;
+            NTP_Timestamp.t3 = ((l1 << 24) + (l2 << 16) + (l3 << 8) + l4) * 1000L - SeventyYears * 1000L;
+
+            // 子秒部分（毫秒或微秒）
+            long f1 = (long) bRecvBuf[44] & 0xFF;
+            long f2 = (long) bRecvBuf[45] & 0xFF;
+            long f3 = (long) bRecvBuf[46] & 0xFF;
+            long f4 = (long) bRecvBuf[47] & 0xFF;
+            long fraction = (f1 << 24) + (f2 << 16) + (f3 << 8) + f4;
+
+            // 将子秒部分转换为毫秒
+            double millisFraction = (fraction / (double) (1L << 32)) * 1000.0;
 
             long secsSince1900 = (l1 << 24) + (l2 << 16) + (l3 << 8) + l4;
-            NTP_Timestamp.lUnixTime = secsSince1900 - SeventyYears;    // Subtract seventy years
+            NTP_Timestamp.lUnixTime = secsSince1900 - SeventyYears;
             NTP_Timestamp.lHour = (long) (NTP_Timestamp.lUnixTime % 86400L) / 3600;
             NTP_Timestamp.lMinute = (long) (NTP_Timestamp.lUnixTime % 3600) / 60;
             NTP_Timestamp.lSecond = (long) NTP_Timestamp.lUnixTime % 60;
-
-            NTP_Timestamp.t3 = ((l1 << 24) + (l2 << 16) + (l3 << 8) + l4) * 1000L - SeventyYears * 1000L;
 
             NTP_Timestamp.delay = (NTP_Timestamp.t4 - NTP_Timestamp.t1) - (NTP_Timestamp.t3 - NTP_Timestamp.t2);
             NTP_Timestamp.offset = ((NTP_Timestamp.t2 - NTP_Timestamp.t1) + (NTP_Timestamp.t3 - NTP_Timestamp.t4)) / 2;
